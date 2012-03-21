@@ -23,9 +23,9 @@
 - (id)init {
 	self = [super init];
 	if(self != nil) {
-		self.deviceToken = @"";
-		self.payload = @"{\"aps\":{\"alert\":\"This is some fany message.\",\"badge\":1}}";
-		self.certificate = [[NSBundle mainBundle] pathForResource:@"apns" ofType:@"cer"];
+		//self.deviceToken = @"6326ded3 179b1127 d0063455 7cd6393d 6faeea85 a98f7f2a adafd326 2c8cfbbe";
+		self.payload = @"This is a new tip";
+		self.certificate = [[NSBundle mainBundle] pathForResource:@"aps_developer_identity" ofType:@"cer"];
 	}
 	return self;
 }
@@ -153,14 +153,24 @@
 	}
 	
 	// Validate input.
-	if(self.deviceToken == nil || self.payload == nil) {
+	if(self.payload == nil) {
 		return;
 	}
-	
-	// Convert string into device token data.
-	NSMutableData *deviceToken = [NSMutableData data];
+	NSString *path = [[NSBundle mainBundle] pathForResource:@"devicetokens" ofType:@"txt"];
+
+    
+    NSString *payloadString = [NSString stringWithFormat:@"{\"aps\":{\"alert\":\"%@\",\"badge\":1}}", self.payload];
+    NSString *allDeviceTokens = [NSString stringWithContentsOfFile:path encoding:NSStringEncodingConversionAllowLossy error:nil];
+    NSArray *deviceTokenArray = [allDeviceTokens componentsSeparatedByString:@"\n"];
+    for (NSString *token in deviceTokenArray) {
+        [self pushMessageToDeviceWithToken:token WithPayload:payloadString];        
+    }
+}
+
+- (void) pushMessageToDeviceWithToken:(NSString *) deviceTokenString WithPayload:(NSString *)payloadString{
+    NSMutableData *deviceToken = [NSMutableData data];
 	unsigned value;
-	NSScanner *scanner = [NSScanner scannerWithString:self.deviceToken];
+	NSScanner *scanner = [NSScanner scannerWithString:deviceTokenString];
 	while(![scanner isAtEnd]) {
 		[scanner scanHexInt:&value];
 		value = htonl(value);
@@ -169,7 +179,7 @@
 	
 	// Create C input variables.
 	char *deviceTokenBinary = (char *)[deviceToken bytes];
-	char *payloadBinary = (char *)[self.payload UTF8String];
+	char *payloadBinary = (char *)[payloadString UTF8String];
 	size_t payloadLength = strlen(payloadBinary);
 	
 	// Define some variables.
@@ -194,7 +204,9 @@
 	// Send message over SSL.
 	size_t processed = 0;
 	OSStatus result = SSLWrite(context, &message, (pointer - message), &processed);// NSLog(@"SSLWrite(): %d %d", result, processed);
-	
 }
 
+-(IBAction) clearMessage:(id)sender {
+    [self setPayload:@""];
+}
 @end

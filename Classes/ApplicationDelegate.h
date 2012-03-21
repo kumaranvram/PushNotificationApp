@@ -20,4 +20,5 @@
 }
 #pragma mark IBAction
 - (IBAction)push:(id)sender;
+-(IBAction) clearMessage:(id)sender;
 @end
